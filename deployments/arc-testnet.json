@@ -1,0 +1,18 @@
+{
+  "network": "arc-testnet",
+  "chainId": 5042002,
+  "timestamp": "2025-12-04T05:02:11.103Z",
+  "deployer": "0x75b0b8EFb946e2892Bc650311D28DEFfbe015Ea9",
+  "contracts": {
+    "PayerX": "0x570b3d069b3350C54Ec5E78E8b2c2677ddb38C0C",
+    "MockFXEngine": "0xF1B0a3F0BE7dAB9f7107c028faC881291734D6de",
+    "RealUSDC": "0x3600000000000000000000000000000000000000",
+    "RealEURC": "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a",
+    "RealUSYC": "0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C"
+  },
+  "config": {
+    "feeBps": "10",
+    "feeCollector": "0x75b0b8EFb946e2892Bc650311D28DEFfbe015Ea9",
+    "whitelistEnabled": false
+  }
+}
