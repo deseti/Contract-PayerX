@@ -1,7 +1,5 @@
 # 🎯 PAYERX DEPLOYMENT - FINAL CHECKLIST
 
-Pastikan semua sudah siap sebelum deploy ke ARC Testnet.
-
 ---
 
 ## ✅ PRE-DEPLOYMENT CHECKLIST
