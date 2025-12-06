@@ -23,9 +23,11 @@ PayerX allows senders to pay using one stablecoin (e.g., EURC) while recipients 
 ### Core Components
 
 1. **PayerX.sol** - Main router contract (2.07M gas deployment)
-2. **IFXEngine.sol** - Generic interface for FX engines
-3. **IERC20.sol** - Standard ERC20 token interface
-4. **IPermit2.sol** - Interface for Uniswap Permit2 (StableFX compatibility)
+2. **StableFXAdapter.sol** - Adapter for Circle's StableFX with real market rates
+3. **MockFXEngine.sol** - Test FX engine for local development
+4. **IFXEngine.sol** - Generic interface for FX engines
+5. **IERC20.sol** - Standard ERC20 token interface
+6. **IPermit2.sol** - Interface for Uniswap Permit2 (StableFX compatibility)
 
 ### Payment Flow
 
@@ -35,11 +37,20 @@ graph LR
     A -->|2. routeAndPay| B
     B -->|3. Pull tokenIn| A
     B -->|4. Deduct Fee| C[Fee Collector]
-    B -->|5. Swap via FX Engine| D[FX Engine]
-    D -->|6. Send tokenOut| E[Recipient]
+    B -->|5. Swap via StableFXAdapter| D[StableFX]
+    D -->|6. Real Market Rates| D
+    D -->|7. Send tokenOut| E[Recipient]
 ```
 
 All steps execute atomically - if any step fails, the entire transaction reverts.
+
+### FX Engine Options
+
+| Engine | Type | Rates | Use Case |
+|--------|------|-------|----------|
+| **StableFXAdapter** | Production | Real-time market | Mainnet & testnet (recommended) |
+| **MockFXEngine** | Test | Hardcoded | Local development only |
+| **StableFX Direct** | Production | RFQ-based | Advanced institutional use |
 
 ## 📡 ARC Network Information
 
@@ -219,23 +230,50 @@ cp .env.example .env
 
 ### Deploy to ARC Testnet
 
+#### Option A: Quick Start (Test with Mock Rates)
+
 ```bash
 # Step 1: Deploy contracts (PayerX + MockFXEngine)
-npx hardhat run scripts/deploy-arc.js --network arc-testnet
+node scripts/deploy-arc.js
 
 # Step 2: Fund MockFXEngine with REAL tokens (after getting from faucet)
-npx hardhat run scripts/fund-fxengine.js --network arc-testnet
+node scripts/fund-fxengine.js
 
 # Step 3: Test a real payment
-npx hardhat run scripts/test-payment.js --network arc-testnet
+node scripts/test-payment.js
 ```
+
+#### Option B: Production Setup (Real Market Rates)
+
+```bash
+# Step 1: Deploy PayerX with MockFXEngine (initial)
+node scripts/deploy-arc.js
+
+# Step 2: Deploy StableFXAdapter for real rates
+node scripts/deploy-stablefx-adapter.js
+
+# Step 3: Fund adapter with liquidity
+node scripts/fund-adapter.js
+
+# Step 4: Migrate PayerX to use real rates
+node scripts/migrate-to-stablefx.js
+
+# Step 5: Test with real market rates
+node scripts/test-stablefx-payment.js
+```
+
+See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for detailed migration steps.
 
 ### What Gets Deployed
 
-The deployment uses **REAL ARC Testnet tokens**:
+**Quick Start (Mock):**
 - ✅ PayerX Contract (main router)
-- ✅ MockFXEngine (FX engine for testing)
-- ✅ Token Whitelist (USDC, EURC, USYC pre-configured)
+- ✅ MockFXEngine (hardcoded rates: 1 EURC = 1.1 USDC)
+
+**Production (Real Rates):**
+- ✅ PayerX Contract (main router)
+- ✅ StableFXAdapter (real market rates: 1 EURC = 1.09 USDC)
+- ✅ Integration with Circle's StableFX
 
 **Important**: These are official Circle stablecoins on ARC Testnet:
 - USDC: `0x3600000000000000000000000000000000000000`
