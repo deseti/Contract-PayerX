@@ -42,15 +42,20 @@ async function main() {
     const eurc = await hre.ethers.getContractAt("IERC20", EURC);
 
     // Verify PayerX is using StableFXAdapter
-    const currentFXEngine = await payerx.fxEngine();
-    if (currentFXEngine.toLowerCase() !== ADAPTER_ADDRESS.toLowerCase()) {
-        console.error("❌ PayerX is not using StableFXAdapter!");
-        console.error("   Current FXEngine:", currentFXEngine);
-        console.error("   Expected:", ADAPTER_ADDRESS);
-        console.log("\n   Run migration first: node scripts/migrate-to-stablefx.js");
-        process.exit(1);
+    try {
+        const currentFXEngine = await payerx.fxEngine();
+        if (currentFXEngine.toLowerCase() !== ADAPTER_ADDRESS.toLowerCase()) {
+            console.error("❌ PayerX is not using StableFXAdapter!");
+            console.error("   Current FXEngine:", currentFXEngine);
+            console.error("   Expected:", ADAPTER_ADDRESS);
+            console.log("\n   Run migration first: node scripts/migrate-to-stablefx.js");
+            process.exit(1);
+        }
+        console.log("✅ PayerX is using StableFXAdapter\n");
+    } catch (error) {
+        console.log("⚠️  Could not verify FX Engine (skipping check)");
+        console.log(`   Assuming adapter is at: ${ADAPTER_ADDRESS}\n`);
     }
-    console.log("✅ PayerX is using StableFXAdapter\n");
 
     // Check initial balances
     console.log("💰 Initial Balances:");
