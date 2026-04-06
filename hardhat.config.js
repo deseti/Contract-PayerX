@@ -4,8 +4,16 @@ dotenv.config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 export default {
-  // Solidity version we are using for the PayerX contract
-  solidity: "0.8.20",
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      viaIR: true,
+    },
+  },
   // Network configurations
   networks: {
     hardhat: {

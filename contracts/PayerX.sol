@@ -56,6 +56,23 @@ contract PayerX is Ownable, Pausable, ReentrancyGuard {
     
     event FeeCollected(address indexed token, uint256 amount);
 
+    event BatchPaymentRouted(
+        address indexed sender,
+        address tokenIn,
+        address tokenOut,
+        uint256 totalAmountIn,
+        uint256 totalAmountOut,
+        uint256 totalFees,
+        uint256 recipientCount,
+        string referenceId
+    );
+
+    event EmergencyWithdraw(
+        address indexed token,
+        uint256 amount,
+        address indexed to
+    );
+
     /**
      * @dev Constructor sets the FX Engine address and initial configuration
      * @param _fxEngine Address of the FX Engine contract (StableFX, Uniswap, etc.)
@@ -84,13 +101,6 @@ contract PayerX is Ownable, Pausable, ReentrancyGuard {
      * @param minAmountOut Minimum acceptable output amount (slippage protection)
      * @param recipient Address that will receive the output tokens
      * @return amountOut The actual amount of output tokens sent to recipient
-     *
-     * Requirements:
-     * - Contract must not be paused
-     * - Tokens must be whitelisted (if whitelist is enabled)
-     * - Sender must have approved PayerX to spend at least `amountIn` of `tokenIn`
-     * - All steps execute atomically in a single transaction
-     * - Transaction reverts if slippage protection is violated
      */
     function routeAndPay(
         address tokenIn,
@@ -99,6 +109,83 @@ contract PayerX is Ownable, Pausable, ReentrancyGuard {
         uint256 minAmountOut,
         address recipient
     ) external nonReentrant whenNotPaused returns (uint256 amountOut) {
+        return _processPayment(tokenIn, tokenOut, amountIn, minAmountOut, recipient);
+    }
+
+    /**
+     * @dev Batch Payout: Process multiple payments in a single atomic transaction
+     * @param tokenIn Address of the input stablecoin (sender pays with this)
+     * @param tokenOut Address of the output stablecoin (recipients receive this)
+     * @param recipients Array of recipient addresses
+     * @param amountsIn Array of input amounts per recipient
+     * @param minAmountsOut Array of minimum acceptable outputs per recipient (slippage protection)
+     * @param referenceId Human-readable batch ID for accounting (e.g. 'Gaji_April_2026')
+     * @return totalOut Total output tokens distributed across all recipients
+     *
+     * Requirements:
+     * - All arrays must have the same length
+     * - Sender must have approved PayerX to spend the sum of all amountsIn
+     * - Entire batch is atomic: if any single payment fails, all revert
+     */
+    function batchRouteAndPay(
+        address tokenIn,
+        address tokenOut,
+        address[] calldata recipients,
+        uint256[] calldata amountsIn,
+        uint256[] calldata minAmountsOut,
+        string memory referenceId
+    ) external nonReentrant whenNotPaused returns (uint256 totalOut) {
+        require(recipients.length > 0, "PayerX: empty batch");
+        require(
+            recipients.length == amountsIn.length && 
+            recipients.length == minAmountsOut.length,
+            "PayerX: array length mismatch"
+        );
+        require(recipients.length <= 50, "PayerX: batch too large");
+        require(bytes(referenceId).length > 0, "PayerX: referenceId required");
+        require(bytes(referenceId).length <= 64, "PayerX: referenceId too long");
+
+        uint256 totalIn = 0;
+        uint256 totalFees = 0;
+        totalOut = 0;
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            uint256 amountOut = _processPayment(
+                tokenIn, tokenOut, amountsIn[i], minAmountsOut[i], recipients[i]
+            );
+            totalIn += amountsIn[i];
+            totalOut += amountOut;
+
+            // Calculate fee portion for tracking
+            if (feeBps > 0) {
+                totalFees += (amountsIn[i] * feeBps) / 10000;
+            }
+        }
+
+        emit BatchPaymentRouted(
+            msg.sender,
+            tokenIn,
+            tokenOut,
+            totalIn,
+            totalOut,
+            totalFees,
+            recipients.length,
+            referenceId
+        );
+
+        return totalOut;
+    }
+
+    /**
+     * @dev Internal: shared payment logic used by both routeAndPay and batchRouteAndPay
+     */
+    function _processPayment(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        address recipient
+    ) internal returns (uint256 amountOut) {
         require(tokenIn != address(0), "PayerX: tokenIn cannot be zero address");
         require(tokenOut != address(0), "PayerX: tokenOut cannot be zero address");
         require(amountIn > 0, "PayerX: amountIn must be greater than zero");
@@ -224,6 +311,29 @@ contract PayerX is Ownable, Pausable, ReentrancyGuard {
     function setWhitelistEnabled(bool enabled) external onlyOwner {
         whitelistEnabled = enabled;
         emit WhitelistStatusChanged(enabled);
+    }
+
+    /**
+     * @dev Emergency token rescue for stuck/accidentally sent tokens
+     * @param token Token address to withdraw
+     * @param amount Amount to withdraw
+     *
+     * Only callable by owner. Use when tokens are sent directly to the
+     * contract address without going through routeAndPay.
+     */
+    function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
+        require(token != address(0), "PayerX: Invalid token");
+        require(amount > 0, "PayerX: Invalid amount");
+        
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        require(balance >= amount, "PayerX: Insufficient balance");
+        
+        require(
+            IERC20(token).transfer(owner(), amount),
+            "PayerX: Transfer failed"
+        );
+        
+        emit EmergencyWithdraw(token, amount, owner());
     }
 
     /**

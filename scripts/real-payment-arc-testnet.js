@@ -85,8 +85,8 @@ async function main() {
         const payerx = new hre.ethers.Contract(PAYERX_ADDRESS, payerxABI, deployer);
 
         const amountIn = hre.ethers.parseUnits("1", 6);
-        const expectedOut = rate * 0.985;
-        const minAmountOut = hre.ethers.parseUnits(expectedOut.toFixed(2), 18);
+        const expectedOut = 1.05; // Force safe minimum amount out for 1 EURC = 1.09 USDC
+        const minAmountOut = hre.ethers.parseUnits(expectedOut.toFixed(2), 6);
 
         console.log("Payment Details:");
         console.log("  Input: 1 EURC");

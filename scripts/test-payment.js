@@ -45,9 +45,9 @@ async function main() {
   const PayerX = await ethers.getContractFactory("PayerX");
   const payerX = PayerX.attach(payerXAddress);
   
-  const IERC20 = await ethers.getContractFactory("IERC20");
-  const eurc = IERC20.attach(ARC_CONTRACTS.EURC);
-  const usdc = IERC20.attach(ARC_CONTRACTS.USDC);
+  const IERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function transfer(address,uint256) returns (bool)", "function approve(address,uint256) returns (bool)"];
+  const eurc = await ethers.getContractAt(IERC20_ABI, ARC_CONTRACTS.EURC);
+  const usdc = await ethers.getContractAt(IERC20_ABI, ARC_CONTRACTS.USDC);
 
   // Check balances BEFORE
   console.log("💼 Balances BEFORE payment:");
@@ -57,8 +57,8 @@ async function main() {
   console.log("   USDC:", ethers.formatUnits(usdcBalanceBefore, 6), "\n");
 
   // Payment parameters
-  const amountIn = ethers.parseUnits("10", 6); // Send 10 EURC
-  const minAmountOut = ethers.parseUnits("10", 6); // Expect at least 10 USDC (1:1 rate minimum)
+  const amountIn = ethers.parseUnits("1", 6); // Send 1 EURC
+  const minAmountOut = ethers.parseUnits("1", 6); // Expect at least 1 USDC
   const recipient = deployer.address; // Send to yourself for testing
 
   console.log("📤 Payment details:");

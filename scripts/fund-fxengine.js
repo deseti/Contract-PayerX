@@ -58,7 +58,7 @@ async function main() {
   console.log("   USYC:", ethers.formatUnits(usycBalance, 6), "\n");
 
   // Amount to transfer (customize as needed)
-  const fundAmount = ethers.parseUnits("1000", 6); // 1000 tokens each
+  const fundAmount = ethers.parseUnits("15", 6); // 15 tokens each
 
   // Transfer USDC
   if (usdcBalance >= fundAmount) {
