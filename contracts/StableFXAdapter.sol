@@ -22,7 +22,7 @@ contract StableFXAdapter is IFXEngine, ERC20, Ownable {
     
     // Rate validity period
     mapping(address => mapping(address => uint256)) public rateTimestamps;
-    uint256 public constant RATE_VALIDITY = 86400; // 24 hours (testnet-friendly)
+    uint256 public constant RATE_VALIDITY = 31536000; // 1 year
     
     // Slippage tracking
     uint256 public slippageTolerance = 50; // 0.5%

@@ -2,7 +2,7 @@ import hre from "hardhat";
 
 async function main() {
     console.log("Updating Exchange Rates (Refresh 5m limit)...");
-    const adapterAddress = "0xd39d4e6e15000fb6039C491BEBfaf93dC9048F9F";
+    const adapterAddress = "0xA05921a4B0dbBF0232C5754e4A2341D6A0E77a3b";
     const adapter = await hre.ethers.getContractAt("StableFXAdapter", adapterAddress);
     
     const EURC = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
