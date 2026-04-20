@@ -1,4 +1,4 @@
-# PayerX - ARC Smart Payment Router
+# WizPay- ARC Smart Payment Router
 
 A **production-ready**, non-custodial Smart Payment Router for the **ARC Layer-1 blockchain** by Circle. PayerX enables atomic cross-stablecoin payments with advanced features like fee collection, emergency pause, and token whitelisting.
 
