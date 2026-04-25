@@ -243,7 +243,7 @@ node scripts/real-payment-flow-official.js
 node run-complete-flow.js
 
 # Deploy to ARC
-npx hardhat run scripts/deploy-arc.js --network arc-testnet
+forge script script/Deploy.s.sol:Deploy --rpc-url "$ARC_TESTNET_RPC_URL" --broadcast
 ```
 
 ---

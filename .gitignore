@@ -20,6 +20,9 @@ dist/
 build/
 artifacts/
 cache/
+cache_forge/
+out/
+broadcast/
 
 # IDE
 .vscode/
@@ -29,9 +32,8 @@ cache/
 *~
 .DS_Store
 
-# Hardhat
-typechain-types/
-.hardhat_modules/
+# Foundry
+
 
 # Test coverage
 coverage/

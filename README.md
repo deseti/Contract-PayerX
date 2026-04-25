@@ -190,33 +190,37 @@ The project includes comprehensive test coverage with **23 test cases** covering
 ### Run Tests
 
 ```bash
-npx hardhat test
+forge test
 ```
 
 ### Test Results
 
 ```
-✔ 23 passing (848ms)
+16 Foundry tests passing
 
-Gas Usage:
-- routeAndPay: 130k - 158k gas (avg: 148k)
-- Deploy WizPay: ~2.07M gas
-- updateFXEngine: ~31k gas
+Coverage includes:
+- deployment and owner controls
+- fee-aware routing and estimates
+- mixed and legacy batch routing
+- slippage protection and input validation
+- non-custodial balance guarantees
 ```
 
 ## 🚀 Deployment Guide
 
 ### Prerequisites
 
-1. **Install Dependencies**
+1. **Install Foundry**
 ```bash
-npm install --legacy-peer-deps
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 ```
 
-2. **Setup Environment**
+2. **Clone Submodules and Setup Environment**
 ```bash
+git submodule update --init --recursive
 cp .env.example .env
-# Edit .env and add your PRIVATE_KEY
+# Edit .env and add PRIVATE_KEY, ARC_TESTNET_RPC_URL, and FX_ENGINE_ADDRESS
 ```
 
 3. **Get Testnet USDC for Gas**
@@ -228,107 +232,70 @@ cp .env.example .env
 - Request USDC, EURC, USYC from faucet
 - These are REAL ARC Testnet tokens (official Circle deployments)
 
-### Deploy to ARC Testnet
-
-#### Option A: Quick Start (Test with Mock Rates)
+### Build, Test, and Deploy
 
 ```bash
-# Step 1: Deploy contracts (WizPay + MockFXEngine)
-node scripts/deploy-arc.js
+# Compile contracts
+forge build
 
-# Step 2: Fund MockFXEngine with REAL tokens (after getting from faucet)
-node scripts/fund-fxengine.js
+# Run the Solidity test suite
+forge test
 
-# Step 3: Test a real payment
-node scripts/test-payment.js
+# Deploy WizPay using values from .env
+forge script script/Deploy.s.sol:Deploy \
+  --rpc-url "$ARC_TESTNET_RPC_URL" \
+  --broadcast
 ```
 
-#### Option B: Production Setup (Real Market Rates)
+### Local Anvil Workflow
 
 ```bash
-# Step 1: Deploy WizPay with MockFXEngine (initial)
-node scripts/deploy-arc.js
+# Start a local node
+anvil
 
-# Step 2: Deploy StableFXAdapter for real rates
-node scripts/deploy-stablefx-adapter.js
-
-# Step 3: Fund adapter with liquidity
-node scripts/fund-adapter.js
-
-# Step 4: Migrate WizPay to use real rates
-node scripts/migrate-to-stablefx.js
-
-# Step 5: Test with real market rates
-node scripts/test-stablefx-payment.js
+# In another shell, point Foundry at Anvil
+forge test
+forge script script/Deploy.s.sol:Deploy \
+  --rpc-url http://127.0.0.1:8545 \
+  --broadcast
 ```
-
-See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for detailed migration steps.
 
 ### What Gets Deployed
 
-**Quick Start (Mock):**
-- ✅ WizPay Contract (main router)
-- ✅ MockFXEngine (hardcoded rates: 1 EURC = 1.1 USDC)
-
-**Production (Real Rates):**
-- ✅ WizPay Contract (main router)
-- ✅ StableFXAdapter (real market rates: 1 EURC = 1.09 USDC)
-- ✅ Integration with Circle's StableFX
+- ✅ `WizPay` with the configured FX engine address
+- ✅ Constructor-level fee and fee collector configuration
+- ✅ Foundry-native build, test, and deploy workflow
 
 **Important**: These are official Circle stablecoins on ARC Testnet:
 - USDC: `0x3600000000000000000000000000000000000000`
 - EURC: `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a`
 - USYC: `0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C`
 
-### Deployment Output
-
-The script will:
-1. ✅ Deploy MockFXEngine with configurable exchange rates
-2. ✅ Deploy WizPay with your fee configuration
-3. ✅ Setup token whitelist (all 3 ARC stablecoins)
-4. ✅ Save deployment info to `deployments/arc-testnet.json`
-
-### Manual Deployment Steps
-
-If you prefer manual deployment:
-
-```bash
-# 1. Compile contracts
-npx hardhat compile
-
-# 2. Deploy via Hardhat console
-npx hardhat console --network arc-testnet
-
-# 3. In console:
-const WizPay = await ethers.getContractFactory("WizPay");
-const wizPay = await WizPay.deploy(
-  "0xYourFXEngineAddress",
-  "0xYourFeeCollector",
-  10  // 0.1% fee
-);
-await wizPay.waitForDeployment();
-console.log("WizPay deployed to:", await wizPay.getAddress());
-```
+Legacy Hardhat payment and deployment scripts were removed during the Foundry migration. For new operational flows, add a Foundry script under `script/` or use `cast send` directly against the deployed contracts.
 
 ## 📦 Project Structure
 
 ```
 WizPay_Router/
-├── contracts/
-│   ├── WizPay.sol              # Main router (enhanced v2)
+├── src/
+│   ├── WizPay.sol              # Main router
+│   ├── StableFXAdapter_V2.sol  # ARC liquidity adapter
 │   ├── IERC20.sol              # ERC20 interface
 │   ├── IFXEngine.sol           # Generic FX engine interface
-│   ├── IPermit2.sol            # Permit2 interface (StableFX)
+│   ├── IPermit2.sol            # Permit2 interface
 │   └── mocks/
 │       ├── MockERC20.sol       # Test stablecoin
 │       └── MockFXEngine.sol    # Test FX engine
-├── scripts/
-│   └── deploy-arc.js           # ARC Testnet deployment
+├── script/
+│   └── Deploy.s.sol            # Foundry deployment script
 ├── test/
-│   └── WizPay.js               # Comprehensive test suite (23 tests)
-├── deployments/                # Deployment artifacts
-├── hardhat.config.js           # Main config
-├── hardhat.config.arc.js       # ARC-specific config
+│   └── WizPay.t.sol            # Foundry Solidity test suite
+├── lib/
+│   ├── forge-std/
+│   └── openzeppelin-contracts/
+├── deployments/                # Deployment metadata
+├── foundry.toml                # Foundry configuration
+├── Makefile                    # Common forge commands
 ├── .env.example                # Environment template
 └── README.md
 ```
@@ -340,21 +307,24 @@ WizPay_Router/
 git clone <your-repo-url>
 cd WizPay_Router
 
-# Install dependencies
-npm install --legacy-peer-deps
+# Install Foundry if needed
+foundryup
+
+# Fetch Solidity dependencies
+git submodule update --init --recursive
 
 # Setup environment
 cp .env.example .env
 # Edit .env with your configuration
 
 # Compile contracts
-npx hardhat compile
+forge build
 
 # Run tests
-npx hardhat test
+forge test
 
 # Deploy to ARC Testnet
-npx hardhat run scripts/deploy-arc.js --network arc-testnet
+forge script script/Deploy.s.sol:Deploy --rpc-url "$ARC_TESTNET_RPC_URL" --broadcast
 ```
 
 ## 🔧 Configuration
@@ -369,10 +339,10 @@ ARC_TESTNET_RPC_URL=https://rpc.testnet.arc.network
 # Deployment Config
 FEE_BPS=10                    # 0.1% fee
 FEE_COLLECTOR=0xYourAddress   # Fee recipient
+FX_ENGINE_ADDRESS=0xYourFx    # Existing FX engine used by Deploy.s.sol
 
-# Optional
-REPORT_GAS=false
-FORKING=false
+# Optional Foundry helpers
+WIZPAY_ADDRESS=0xYourWizPay
 ```
 
 ### Fee Configuration
